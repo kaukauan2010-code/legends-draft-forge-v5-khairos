@@ -12,7 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import type { EventoJogo, Time, CobrancaPenalti } from "@/lib/simulador";
 import { statsTime } from "@/lib/simulador";
-import { RARIDADE_CSS } from "@/lib/selecoes";
+import { RARIDADE_CSS, RARIDADE_TEXT_CLASS, RARIDADE_BORDER_CLASS, RARIDADE_LABEL } from "@/lib/selecoes";
 import { CampoAoVivo } from "@/components/CampoAoVivo";
 import { ChaveamentoVisual } from "@/components/ChaveamentoVisual";
 import { toast } from "sonner";
