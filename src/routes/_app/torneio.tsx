@@ -191,12 +191,14 @@ function Torneio() {
           const meuFimDeJogo = useCampanha.getState().meuTime();
           if (meuFimDeJogo && adv) {
             const faseLabel = (faseDaPartida ?? "").toUpperCase();
+            const empateReal = res.golsCasa === res.golsFora;
             setResumoPosJogo({
               meu: meuFimDeJogo,
               adv,
               placar: `${res.golsCasa} x ${res.golsFora}`,
               faseLabel,
-              minhaVitoria: ultimoJogo?.minhaVitoria ?? false,
+              minhaVitoria: !empateReal && (ultimoJogo?.minhaVitoria ?? false),
+              empate: empateReal,
             });
             // Persiste o adversário para exibi-lo no card final de eliminado/campeão.
             setUltimoAdversario(adv);
