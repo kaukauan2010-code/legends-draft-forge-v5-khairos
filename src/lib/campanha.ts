@@ -429,6 +429,7 @@ export const useCampanha = create<EstadoCampanha & CampanhaActions>()(
               texto: `${meu.nome} ${res.golsCasa} x ${res.golsFora} ${adv.nome}`,
               resultado: res,
               minhaVitoria: res.golsCasa > res.golsFora,
+              empate: res.golsCasa === res.golsFora,
             }],
           });
           return res;
