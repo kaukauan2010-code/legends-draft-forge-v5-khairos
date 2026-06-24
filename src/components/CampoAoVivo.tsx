@@ -48,28 +48,22 @@ const ATRACAO_BOLA: Record<Velocidade, number> = {
 
 
 
-// Converte as coordenadas de um time para o sistema do campo HORIZONTAL:
-// casa ocupa a metade esquerda (gol em x=4, ataque avança até x≈48)
-// fora ocupa a metade direita (gol em x=96, ataque avança até x≈52), espelhado.
-// O eixo Y do campo passa a ser a LARGURA do gramado (slot.x original).
+// Coordenadas internas: casa ocupa a metade "de cima" (y baixo = gol da casa),
+// fora ocupa a metade "de baixo". Para renderizar HORIZONTAL, o componente abaixo
+// transpõe x↔y na hora de pintar, mas a lógica de jogadas continua intacta.
 function calcularPosicoes(time: Time, ehCasa: boolean): PosicaoBolinha[] {
   return time.formacao.slots.map(slot => {
     const jog = time.escalacao.find(j => j.slotId === slot.id);
-    // slot.y original: 0 = ataque do próprio time, 100 = goleiro do próprio time.
-    // No campo horizontal isso vira o eixo X:
-    // Casa: y=100(gol)→x=4 ... y=0(ataque)→x=48
-    // Fora: y=100(gol)→x=96 ... y=0(ataque)→x=52
-    const xCombinado = ehCasa
+    const yCombinado = ehCasa
       ? 4 + (slot.y / 100) * 44
       : 96 - (slot.y / 100) * 44;
-    // slot.x original (0=esquerda, 100=direita do time) vira o eixo Y do campo.
     return {
       id: slot.id,
       nome: jog?.nome ?? "?",
       numero: jog?.numero ?? 0,
       raridade: jog?.raridade ?? "comum",
-      x: xCombinado,
-      y: slot.x,
+      x: slot.x,
+      y: yCombinado,
       timeCasa: ehCasa,
     };
   });
