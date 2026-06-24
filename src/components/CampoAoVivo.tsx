@@ -315,38 +315,44 @@ export function CampoAoVivo({ casa, fora, eventoAtual, cobrancaAtual, modo = "pa
   }, [cobrancaAtual?.rodada, cobrancaAtual?.time, modo]);
 
   return (
-    <div className="relative aspect-[5/6] w-full max-w-[220px] mx-auto overflow-hidden rounded-xl border-2 border-white/10 shadow-inner"
-         style={{ background: "linear-gradient(to bottom, var(--color-pitch) 0%, var(--color-pitch-dark) 50%, var(--color-pitch) 100%)" }}>
-      {/* linhas */}
+    <div className="relative aspect-[16/10] w-full overflow-hidden rounded-xl border-2 border-white/10 shadow-inner"
+         style={{ background: "linear-gradient(to right, var(--color-pitch) 0%, var(--color-pitch-dark) 50%, var(--color-pitch) 100%)" }}>
+      {/* linhas do campo (horizontal: meio-de-campo vertical, áreas nas laterais) */}
       <div className="pointer-events-none absolute inset-2 rounded border border-white/25" />
-      <div className="absolute inset-x-2 top-1/2 h-px bg-white/25" />
+      {/* linha de meio-campo (vertical) */}
+      <div className="absolute inset-y-2 left-1/2 w-px bg-white/25" />
+      {/* círculo central */}
       <div className="absolute left-1/2 top-1/2 size-14 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/25" />
-      <div className="absolute left-1/2 top-1 h-7 w-2/5 -translate-x-1/2 border-x border-b border-white/25" />
-      <div className="absolute left-1/2 bottom-1 h-7 w-2/5 -translate-x-1/2 border-x border-t border-white/25" />
+      {/* área esquerda (gol da casa) */}
+      <div className="absolute top-1/2 left-1 w-7 h-2/5 -translate-y-1/2 border-y border-r border-white/25" />
+      {/* área direita (gol do fora) */}
+      <div className="absolute top-1/2 right-1 w-7 h-2/5 -translate-y-1/2 border-y border-l border-white/25" />
 
-      {/* jogadores (estilo botão: bolinhas com número e cor de raridade, em movimento contínuo) */}
+      {/* jogadores — transpõe internamente: x interno (largura do time) vira top,
+          y interno (eixo de ataque) vira left. Resultado: casa à esquerda, fora à direita. */}
       {todasPosicoes.map(p => {
         const chave = `${p.timeCasa ? "c" : "f"}-${p.id}`;
         const desloc = deslocamentos[chave] ?? { dx: 0, dy: 0 };
-        const xFinal = Math.min(97, Math.max(3, p.x + desloc.dx));
-        const yFinal = Math.min(97, Math.max(3, p.y + desloc.dy));
+        const xInterno = Math.min(97, Math.max(3, p.x + desloc.dx));
+        const yInterno = Math.min(97, Math.max(3, p.y + desloc.dy));
+        // transpor: left = yInterno (campo de ataque), top = xInterno (largura)
+        const leftFinal = yInterno;
+        const topFinal = xInterno;
         return (
           <div
             key={chave}
             className="absolute -translate-x-1/2 -translate-y-1/2"
             style={{
-              left: `${xFinal}%`,
-              top: `${yFinal}%`,
+              left: `${leftFinal}%`,
+              top: `${topFinal}%`,
               transitionProperty: "left, top",
               transitionDuration: `${INTERVALO_MOVIMENTO_MS[velocidade]}ms`,
-              // easeOut suave em vez de linear — jogadores chegam ao destino
-              // sem aquela sensação mecânica de teletransporte.
               transitionTimingFunction: "cubic-bezier(0.25, 0.46, 0.45, 0.94)",
             }}
           >
             <div
               className={cn(
-                "grid size-4 place-items-center rounded-full border text-[6px] font-black text-white shadow",
+                "grid size-5 place-items-center rounded-full border text-[7px] font-black text-white shadow",
                 p.timeCasa ? COR_CASA : COR_FORA,
                 !p.timeCasa && "opacity-90",
                 destaque === p.id && "ring-2 ring-white scale-150 z-10",
@@ -359,12 +365,12 @@ export function CampoAoVivo({ casa, fora, eventoAtual, cobrancaAtual, modo = "pa
         );
       })}
 
-      {/* bola */}
+      {/* bola — também transposta */}
       <div
         className="absolute -translate-x-1/2 -translate-y-1/2 z-20"
         style={{
-          left: `${bola.x}%`,
-          top: `${bola.y}%`,
+          left: `${bola.y}%`,
+          top: `${bola.x}%`,
           transitionProperty: "left, top",
           transitionDuration: "400ms",
           transitionTimingFunction: "cubic-bezier(0.25, 0.1, 0.25, 1)",
@@ -373,11 +379,11 @@ export function CampoAoVivo({ casa, fora, eventoAtual, cobrancaAtual, modo = "pa
         <div className="size-3 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.9),0_1px_3px_rgba(0,0,0,0.5)]" />
       </div>
 
-      {/* legenda dos times */}
+      {/* legenda dos times — casa à esquerda, fora à direita */}
       <div className="absolute top-1 left-1 rounded bg-black/50 px-1.5 py-0.5 text-[8px] font-bold text-white flex items-center gap-1">
         <FlagEmoji emoji={casa.bandeira} size={12} /> {casa.nome}
       </div>
-      <div className="absolute bottom-1 right-1 rounded bg-black/50 px-1.5 py-0.5 text-[8px] font-bold text-white flex items-center gap-1">
+      <div className="absolute top-1 right-1 rounded bg-black/50 px-1.5 py-0.5 text-[8px] font-bold text-white flex items-center gap-1">
         <FlagEmoji emoji={fora.bandeira} size={12} /> {fora.nome}
       </div>
     </div>
