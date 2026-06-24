@@ -14,8 +14,8 @@ interface Props {
   /** Quando em modo pênaltis, a cobrança atual sendo batida */
   cobrancaAtual?: CobrancaPenalti | null;
   modo?: "partida" | "penaltis";
-  /** Velocidade selecionada pelo jogador para a partida — controla o ritmo do
-   * movimento contínuo dos jogadores em campo (estilo futebol de botão). */
+  /** Velocidade selecionada pelo jogador — controla a frequência de jogadas e
+   *  a rapidez com que os jogadores se reposicionam (lerp por frame). */
   velocidade?: Velocidade;
 }
 
@@ -29,22 +29,21 @@ interface PosicaoBolinha {
   timeCasa: boolean;
 }
 
-// Intervalo entre "passos" de movimento contínuo dos jogadores, por velocidade.
-// Passos curtos + transição CSS suave dão sensação de movimento contínuo, não
-// teletransporte aleatório. Em "ultra" o ritmo é mais rápido pra acompanhar
-// a simulação acelerada dos 90 minutos.
-const INTERVALO_MOVIMENTO_MS: Record<Velocidade, number> = {
-  normal: 1200,
-  rapida: 700,
-  ultra: 300,
+// Quão "rápido" cada jogador interpola por frame em direção ao alvo (0..1).
+// Valores baixos = movimento suave/realista; altos = reativo demais.
+const VEL_LERP: Record<Velocidade, number> = {
+  normal: 0.025,
+  rapida: 0.045,
+  ultra: 0.085,
 };
-// Quão forte cada jogador é atraído pela bola (0 = ignora, 1 = vai direto).
-// Valores moderados pra acompanhar a bola sem desfazer a formação.
-const ATRACAO_BOLA: Record<Velocidade, number> = {
-  normal: 0.18,
-  rapida: 0.26,
-  ultra: 0.4,
+// Intervalo entre RECÁLCULOS de alvo (não de posição — a posição interpola
+// continuamente via rAF). Alvos mudam menos vezes que frames pra ficar natural.
+const INTERVALO_ALVO_MS: Record<Velocidade, number> = {
+  normal: 900,
+  rapida: 550,
+  ultra: 260,
 };
+
 
 
 
