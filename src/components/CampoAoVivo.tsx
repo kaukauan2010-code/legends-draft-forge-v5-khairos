@@ -79,66 +79,109 @@ export function CampoAoVivo({ casa, fora, eventoAtual, cobrancaAtual, modo = "pa
   const todasPosicoes = [...posCasa, ...posFora];
 
   const [bola, setBola] = useState<{ x: number; y: number }>({ x: 50, y: 50 });
-  const [destaque, setDestaque] = useState<string | null>(null); // id do jogador em destaque
-  // Deslocamento atual de cada jogador em relação à sua posição-base.
-  // Já NÃO é aleatório — é calculado em função da posição atual da bola: jogadores
-  // do time com posse avançam, o restante recua/marca, mantendo a forma geral da
-  // formação. Resultado parece muito mais com futebol e menos com jogo de botão.
+  const [destaque, setDestaque] = useState<string | null>(null);
+  // Posição interpolada de cada jogador (atualizada a 60fps via rAF, NUNCA por
+  // setInterval). Isso elimina o "snap" de futebol de botão — cada jogador anda
+  // suavemente em direção ao alvo que muda conforme a bola e a posse.
   const [deslocamentos, setDeslocamentos] = useState<Record<string, { dx: number; dy: number }>>({});
+  const deslocRef = useRef<Record<string, { dx: number; dy: number }>>({});
+  const alvosRef = useRef<Record<string, { dx: number; dy: number; runUntil: number }>>({});
   const animRef = useRef<ReturnType<typeof setTimeout>[]>([]);
-  const movimentoRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const rafRef = useRef<number | null>(null);
+  const alvoTickRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const bolaRef = useRef(bola);
   const posseRef = useRef<"casa" | "fora" | null>(null);
   bolaRef.current = bola;
 
-  // Movimento contínuo coordenado: a cada "passo", cada jogador é puxado um pouco
-  // em direção à posição que faria sentido dado onde está a bola — não com
-  // movimento aleatório. Atacantes do time com posse sobem; defensores do time
-  // sem posse recuam para marcar. A força e a forma da formação são preservadas.
+  // === Recalcula ALVO de cada jogador periodicamente (não a posição em si).
+  // Atacantes do time com posse fazem "corridas" pra frente; meio-campistas
+  // giram pra dar opção de passe; defensores recuam em bloco quando o outro
+  // time ataca. Um leve componente aleatório simula desmarcação natural.
   useEffect(() => {
-    if (movimentoRef.current) clearInterval(movimentoRef.current);
-    const atracao = ATRACAO_BOLA[velocidade];
-    movimentoRef.current = setInterval(() => {
+    if (alvoTickRef.current) clearInterval(alvoTickRef.current);
+    alvoTickRef.current = setInterval(() => {
       const b = bolaRef.current;
       const posse = posseRef.current;
-      setDeslocamentos(() => {
-        const novo: Record<string, { dx: number; dy: number }> = {};
-        for (const p of todasPosicoes) {
-          const key = `${p.timeCasa ? "c" : "f"}-${p.id}`;
-          const ehMeuTime = (p.timeCasa && posse === "casa") || (!p.timeCasa && posse === "fora");
-          // alvo desejado: jogador puxado em direção à bola, mas só uma fração da
-          // distância — defensores/goleiros são puxados menos (têm que segurar
-          // a linha), atacantes mais. Sem time de posse, todos quase param.
-          const peso = posse == null
-            ? 0.05
-            : ehMeuTime
-              ? (p.y < 40 ? atracao * 1.2 : atracao * 0.6) // ataque sobe mais que defesa
-              : (p.y < 40 ? atracao * 0.5 : atracao * 0.9); // defesa do outro time recua para marcar
-          // gol não sai do gol — totalmente parado
-          if (p.numero === 1 || (p.timeCasa && p.y <= 8) || (!p.timeCasa && p.y >= 92)) {
-            novo[key] = { dx: 0, dy: 0 };
-            continue;
-          }
-          const dxIdeal = (b.x - p.x) * peso;
-          const dyIdeal = (b.y - p.y) * peso;
-          // limita o deslocamento absoluto pra forma da formação não desaparecer
-          const lim = 12;
-          // Sem jitter aleatório: o movimento é puramente reativo à posição da
-          // bola e ao papel tático do jogador. Resultado: muito mais parecido
-          // com futebol de verdade e nada com jogo de botão.
-          novo[key] = {
-            dx: Math.max(-lim, Math.min(lim, dxIdeal)),
-            dy: Math.max(-lim, Math.min(lim, dyIdeal)),
-          };
-
-
+      const agora = performance.now();
+      const novos: Record<string, { dx: number; dy: number; runUntil: number }> = {};
+      for (const p of todasPosicoes) {
+        const key = `${p.timeCasa ? "c" : "f"}-${p.id}`;
+        const anterior = alvosRef.current[key];
+        // Mantém corrida atual até terminar — dá continuidade de movimento.
+        if (anterior && anterior.runUntil > agora) {
+          novos[key] = anterior;
+          continue;
         }
-        return novo;
-      });
-    }, INTERVALO_MOVIMENTO_MS[velocidade]);
-    return () => { if (movimentoRef.current) clearInterval(movimentoRef.current); };
+        // Goleiro fica preso ao gol, só desloca lateralmente seguindo a bola.
+        const ehGoleiro = p.numero === 1 || (p.timeCasa && p.y <= 8) || (!p.timeCasa && p.y >= 92);
+        if (ehGoleiro) {
+          const lateral = (b.x - p.x) * 0.15;
+          novos[key] = { dx: Math.max(-6, Math.min(6, lateral)), dy: 0, runUntil: agora + 600 };
+          continue;
+        }
+        const ehMeuTime = (p.timeCasa && posse === "casa") || (!p.timeCasa && posse === "fora");
+        const ehAtacante = p.timeCasa ? p.y < 28 : p.y > 72;
+        const ehMeio = p.timeCasa ? p.y >= 28 && p.y < 42 : p.y > 58 && p.y <= 72;
+        // Componente direcional (puxa pela bola/papel) + componente aleatório
+        // (desmarcação/oscilação). A soma evita movimento mecânico.
+        let pesoX = 0.15, pesoY = 0.15;
+        if (posse != null) {
+          if (ehMeuTime) {
+            // ataque sobe pra frente da bola; meio gira lateral; defesa fecha
+            pesoX = ehAtacante ? 0.35 : ehMeio ? 0.22 : 0.10;
+            pesoY = ehAtacante ? 0.45 : ehMeio ? 0.28 : 0.12;
+          } else {
+            // marcação: defesa recua em bloco, meio fecha espaço
+            pesoX = ehAtacante ? 0.12 : ehMeio ? 0.25 : 0.30;
+            pesoY = ehAtacante ? 0.10 : ehMeio ? 0.30 : 0.38;
+          }
+        }
+        const dirX = (b.x - p.x) * pesoX;
+        const dirY = (b.y - p.y) * pesoY;
+        // ruído de "corrida em diagonal" — magnitude pequena, pra desmarcar
+        const ruidoX = (Math.random() - 0.5) * (ehAtacante ? 8 : 4);
+        const ruidoY = (Math.random() - 0.5) * (ehAtacante ? 6 : 3);
+        const lim = ehAtacante ? 16 : ehMeio ? 12 : 8;
+        novos[key] = {
+          dx: Math.max(-lim, Math.min(lim, dirX + ruidoX)),
+          dy: Math.max(-lim, Math.min(lim, dirY + ruidoY)),
+          runUntil: agora + INTERVALO_ALVO_MS[velocidade] * (0.6 + Math.random() * 0.8),
+        };
+      }
+      alvosRef.current = novos;
+    }, INTERVALO_ALVO_MS[velocidade]);
+    return () => { if (alvoTickRef.current) clearInterval(alvoTickRef.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [velocidade, casa.nome, fora.nome]);
+
+  // === Loop de interpolação a 60fps: a cada frame, puxa a posição atual de
+  // cada jogador um pouco mais perto do alvo. Resultado = movimento contínuo
+  // e fluido, sem "saltos" entre posições.
+  useEffect(() => {
+    const lerp = VEL_LERP[velocidade];
+    const tick = () => {
+      const atuais = deslocRef.current;
+      const alvos = alvosRef.current;
+      const novo: Record<string, { dx: number; dy: number }> = {};
+      let mudou = false;
+      for (const p of todasPosicoes) {
+        const key = `${p.timeCasa ? "c" : "f"}-${p.id}`;
+        const a = atuais[key] ?? { dx: 0, dy: 0 };
+        const alvo = alvos[key] ?? { dx: 0, dy: 0 };
+        const ndx = a.dx + (alvo.dx - a.dx) * lerp;
+        const ndy = a.dy + (alvo.dy - a.dy) * lerp;
+        novo[key] = { dx: ndx, dy: ndy };
+        if (Math.abs(ndx - a.dx) > 0.01 || Math.abs(ndy - a.dy) > 0.01) mudou = true;
+      }
+      deslocRef.current = novo;
+      if (mudou) setDeslocamentos(novo);
+      rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+    return () => { if (rafRef.current != null) cancelAnimationFrame(rafRef.current); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [velocidade, casa.nome, fora.nome]);
+
 
   // Jogadas "de enchimento" entre eventos do simulador: passe entre dois
   // companheiros do time com posse, cruzamento, escanteio, lateral, chute
