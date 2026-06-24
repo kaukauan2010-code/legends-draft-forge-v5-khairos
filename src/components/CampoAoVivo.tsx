@@ -208,10 +208,22 @@ export function CampoAoVivo({ casa, fora, eventoAtual, cobrancaAtual, modo = "pa
       const tipoSorte = Math.random();
       // ~45% passe curto, 15% passe longo, 12% cruzamento, 8% chute,
       // 8% escanteio, 7% lateral, 5% troca de posse
-      if (tipoSorte < 0.45) {
+      if (tipoSorte < 0.35) {
+        // TRIANGULAÇÃO — passe A→B→C em sequência, jogadores próximos
+        const a = meuTime[Math.floor(Math.random() * meuTime.length)]!;
+        const proxA = meuTime.filter(p => p.id !== a.id && Math.abs(p.y - a.y) < 22 && Math.abs(p.x - a.x) < 30);
+        const b = proxA.length ? proxA[Math.floor(Math.random() * proxA.length)]! : meuTime[Math.floor(Math.random() * meuTime.length)]!;
+        const proxB = meuTime.filter(p => p.id !== a.id && p.id !== b.id && Math.abs(p.y - b.y) < 22);
+        // 3º vértice da triangulação preferencialmente mais à frente
+        const cand = proxB.filter(p => atacaCasa ? p.y < b.y : p.y > b.y);
+        const c = (cand.length ? cand : proxB.length ? proxB : meuTime)[Math.floor(Math.random() * (cand.length || proxB.length || meuTime.length))]!;
+        setBola({ x: a.x, y: a.y });
+        const t1 = setTimeout(() => setBola({ x: b.x, y: b.y }), 280);
+        const t2 = setTimeout(() => setBola({ x: c.x + (Math.random() - 0.5) * 3, y: c.y + (Math.random() - 0.5) * 3 }), 560);
+        animRef.current.push(t1, t2);
+      } else if (tipoSorte < 0.50) {
         // passe curto entre dois companheiros próximos
         const a = meuTime[Math.floor(Math.random() * meuTime.length)]!;
-        // escolhe um companheiro próximo (distância menor)
         const proximos = meuTime.filter(p => p.id !== a.id && Math.abs(p.y - a.y) < 20);
         const b = proximos.length ? proximos[Math.floor(Math.random() * proximos.length)]! : meuTime[Math.floor(Math.random() * meuTime.length)]!;
         setBola({ x: a.x, y: a.y });
