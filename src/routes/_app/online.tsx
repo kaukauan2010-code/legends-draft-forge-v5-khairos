@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -159,7 +159,12 @@ function Online() {
           <Button onClick={criar} disabled={busy || !user} className="w-full h-12 font-display uppercase tracking-widest font-black">
             Criar sala
           </Button>
-          {!user && <p className="text-xs text-destructive text-center">Faça login para criar salas.</p>}
+          {!user && (
+            <p className="text-xs text-destructive text-center space-x-2">
+              <span>Faça login para criar salas.</span>
+              <Link to="/auth" className="underline font-bold">Entrar</Link>
+            </p>
+          )}
         </div>
       )}
 
@@ -175,7 +180,10 @@ function Online() {
             <div className="space-y-1.5">
               <Label htmlFor="nome">Seu nome</Label>
               <Input id="nome" value={nomeVisitante} onChange={e => setNomeVisitante(e.target.value)} placeholder="Visitante" />
-              <p className="text-[10px] text-destructive">Visitantes ainda não podem entrar em salas — faça login.</p>
+              <p className="text-[10px] text-destructive space-x-1">
+                <span>Visitantes ainda não podem entrar em salas —</span>
+                <Link to="/auth" className="underline font-bold">faça login</Link>
+              </p>
             </div>
           )}
           <Button onClick={entrar} disabled={busy} className="w-full h-12 font-display uppercase tracking-widest font-black">

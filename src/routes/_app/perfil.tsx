@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { LogOut, Upload, Sun, Moon, KeyRound } from "lucide-react";
+import { LogOut, Upload, Sun, Moon, KeyRound, LogIn } from "lucide-react";
 import { AmigosSection } from "@/components/AmigosSection";
 
 export const Route = createFileRoute("/_app/perfil")({
@@ -31,6 +31,7 @@ function Perfil() {
   const [nome, setNome] = useState("");
   const [avatar, setAvatar] = useState("");
   const [enviando, setEnviando] = useState(false);
+  const [senhaAtual, setSenhaAtual] = useState("");
   const [novaSenha, setNovaSenha] = useState("");
   const [confSenha, setConfSenha] = useState("");
 
@@ -54,12 +55,20 @@ function Perfil() {
 
   const trocarSenha = useMutation({
     mutationFn: async () => {
+      if (!senhaAtual) throw new Error("Informe a senha atual");
       if (novaSenha.length < 6) throw new Error("Senha deve ter pelo menos 6 caracteres");
       if (novaSenha !== confSenha) throw new Error("As senhas não coincidem");
+      if (senhaAtual === novaSenha) throw new Error("A nova senha deve ser diferente da atual");
+      // Reautentica primeiro para validar a senha original (Supabase não exige por padrão).
+      const { error: signErr } = await supabase.auth.signInWithPassword({
+        email: user!.email!,
+        password: senhaAtual,
+      });
+      if (signErr) throw new Error("Senha atual incorreta");
       const { error } = await supabase.auth.updateUser({ password: novaSenha });
       if (error) throw error;
     },
-    onSuccess: () => { toast.success("Senha atualizada"); setNovaSenha(""); setConfSenha(""); },
+    onSuccess: () => { toast.success("Senha atualizada"); setSenhaAtual(""); setNovaSenha(""); setConfSenha(""); },
     onError: (e: any) => toast.error(e.message),
   });
 
@@ -86,7 +95,10 @@ function Perfil() {
     return (
       <div className="mx-auto max-w-md px-4 py-10 text-center space-y-4">
         <h1 className="font-display text-3xl uppercase italic">Modo Visitante</h1>
-        <p className="text-sm text-muted-foreground">Crie uma conta para personalizar seu perfil.</p>
+        <p className="text-sm text-muted-foreground">Crie uma conta ou faça login para personalizar seu perfil.</p>
+        <Button asChild className="w-full h-11 font-bold uppercase tracking-widest">
+          <Link to="/auth"><LogIn className="size-4 mr-1.5" /> Fazer login</Link>
+        </Button>
       </div>
     );
   }
@@ -149,12 +161,16 @@ function Perfil() {
             <KeyRound className="size-3.5" /> Alterar senha
           </div>
           <div className="space-y-1.5">
+            <Label>Senha atual</Label>
+            <Input type="password" autoComplete="current-password" value={senhaAtual} onChange={e => setSenhaAtual(e.target.value)} required />
+          </div>
+          <div className="space-y-1.5">
             <Label>Nova senha</Label>
-            <Input type="password" minLength={6} value={novaSenha} onChange={e => setNovaSenha(e.target.value)} required />
+            <Input type="password" autoComplete="new-password" minLength={6} value={novaSenha} onChange={e => setNovaSenha(e.target.value)} required />
           </div>
           <div className="space-y-1.5">
             <Label>Confirmar nova senha</Label>
-            <Input type="password" minLength={6} value={confSenha} onChange={e => setConfSenha(e.target.value)} required />
+            <Input type="password" autoComplete="new-password" minLength={6} value={confSenha} onChange={e => setConfSenha(e.target.value)} required />
           </div>
           <Button type="submit" disabled={trocarSenha.isPending} className="w-full h-11 font-bold uppercase tracking-widest">
             {trocarSenha.isPending ? "Atualizando..." : "Atualizar senha"}

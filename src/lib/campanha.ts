@@ -10,7 +10,7 @@ import type { Estrategia, JogadorEscalado, Time, ResultadoPartida } from "./simu
 import { montarVariosTimesCPU, simularPartida, simularPlacarRapido, simularPenaltis } from "./simulador";
 import type { ResultadoPenaltis } from "./simulador";
 import type { Jogador, Selecao } from "./selecoes";
-import { sortearSelecao, posicoesCompativeis } from "./selecoes";
+import { posicoesCompativeis, SELECOES } from "./selecoes";
 
 export type Modo = "classico" | "almanaque";
 export type FaseTorneio = "grupos" | "oitavas" | "quartas" | "semi" | "final" | "campeao" | "eliminado";
@@ -76,6 +76,8 @@ export interface EstadoCampanha {
   mostrarApresentacaoGrupos: boolean;
   mostrarChaveamento: FaseTorneio | null; // qual fase de mata-mata mostrar o chaveamento antes de jogar
   modoAutomatico: boolean;
+  jaFoiSalvo: boolean; // evita re-salvar ao navegar de volta
+  partidaId: string | null; // id da row em `partidas` para upsert incremental
 }
 
 interface CampanhaActions {
@@ -87,6 +89,7 @@ interface CampanhaActions {
   usarReroll: () => void;
   excluirJogador: (slotId: string) => boolean;
   forcarFimDraft: () => void;
+  sortearAleatorio: () => void;
   comecarTorneio: () => void;
   confirmarApresentacaoGrupos: () => void;
   confirmarChaveamento: () => void;
@@ -94,6 +97,7 @@ interface CampanhaActions {
   resetar: () => void;
   tentarNovamente: () => void;
   setModoAutomatico: (v: boolean) => void;
+  setJaFoiSalvo: (v: boolean) => void;
   meuTime: () => Time | null;
   adversarioAtual: () => Time | null;
 }
@@ -112,6 +116,8 @@ function estadoInicial(): EstadoCampanha {
     historicoJogos: [], trocasRestantes: 0,
     mostrarApresentacaoGrupos: false, mostrarChaveamento: null,
     modoAutomatico: false,
+    jaFoiSalvo: false,
+    partidaId: null,
   };
 }
 
@@ -157,7 +163,19 @@ export const useCampanha = create<EstadoCampanha & CampanhaActions>()(
       sortearProxima: () => {
         const s = get();
         if (!s.slotsRestantes.length) return;
-        const sel = sortearSelecao(s.selecoesUsadas);
+        // Garante que o time sorteado tenha pelo menos um jogador disponível
+        // para algum slot livre — evita gastar reroll com time "bloqueado"
+        // (ex: time só com CA quando precisamos de PE/PD/ATA).
+        const posicoesLivres = new Set(s.slotsRestantes.map(sl => sl.posicao));
+        const temJogadorUsavel = (sel: Selecao) =>
+          sel.jogadores.some(j =>
+            !s.nomesJaEscolhidos.includes(j.nome) &&
+            posicoesCompativeis(j.posicao).some(p => posicoesLivres.has(p))
+          );
+        let pool = SELECOES.filter(sel => !s.selecoesUsadas.includes(sel.id) && temJogadorUsavel(sel));
+        if (!pool.length) pool = SELECOES.filter(temJogadorUsavel);
+        if (!pool.length) pool = SELECOES;
+        const sel = pool[Math.floor(Math.random() * pool.length)]!;
         set({
           selecaoAtual: sel,
           selecoesUsadas: [...s.selecoesUsadas, sel.id],
@@ -273,6 +291,8 @@ export const useCampanha = create<EstadoCampanha & CampanhaActions>()(
 
       setModoAutomatico: (v) => set({ modoAutomatico: v }),
 
+      setJaFoiSalvo: (v) => set({ jaFoiSalvo: v }),
+
       meuTime: () => {
         const s = get();
         if (!s.config || s.escalacao.length < 11) return null;
@@ -305,6 +325,47 @@ export const useCampanha = create<EstadoCampanha & CampanhaActions>()(
         return confronto.casa ?? null;
       },
 
+      sortearAleatorio: () => {
+        // Preenche todos os slots livres com jogadores aleatórios de qualquer seleção,
+        // respeitando posição e sem repetir nomes.
+        const s = get();
+        if (!s.slotsRestantes.length || !s.config) return;
+        const nomesUsados = new Set(s.nomesJaEscolhidos);
+        const novaEscalacao: typeof s.escalacao = [...s.escalacao];
+        const novosNomes: string[] = [...s.nomesJaEscolhidos];
+        const slotsRestantesApos: typeof s.slotsRestantes = [];
+
+        // Pool embaralhado de todos os jogadores de todas as seleções
+        const todosJogadores = [...SELECOES]
+          .sort(() => Math.random() - 0.5)
+          .flatMap(sel => sel.jogadores);
+
+        for (const slot of s.slotsRestantes) {
+          const aceitas = posicoesCompativeis(slot.posicao);
+          const candidatos = todosJogadores.filter(j =>
+            aceitas.includes(j.posicao) && !nomesUsados.has(j.nome)
+          );
+          if (!candidatos.length) { slotsRestantesApos.push(slot); continue; }
+          const escolhido = candidatos[Math.floor(Math.random() * candidatos.length)]!;
+          nomesUsados.add(escolhido.nome);
+          novosNomes.push(escolhido.nome);
+          novaEscalacao.push({
+            ...escolhido,
+            slotId: slot.id,
+            improvisado: escolhido.posicao !== slot.posicao,
+            forcaEfetiva: escolhido.forca,
+          });
+        }
+
+        set({
+          escalacao: novaEscalacao,
+          slotsRestantes: slotsRestantesApos,
+          nomesJaEscolhidos: novosNomes,
+          jogadorPendente: null,
+          selecaoAtual: null,
+        });
+      },
+
       comecarTorneio: () => {
         const s = get();
         const meu = get().meuTime();
@@ -335,6 +396,8 @@ export const useCampanha = create<EstadoCampanha & CampanhaActions>()(
           chave: { oitavas: [], quartas: [], semi: [], final: [] },
           proximoConfronto: null, historicoJogos: [],
           mostrarApresentacaoGrupos: true, mostrarChaveamento: null,
+          partidaId: (typeof crypto !== "undefined" && crypto.randomUUID) ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`,
+          jaFoiSalvo: false,
         });
       },
 
@@ -444,8 +507,16 @@ export const useCampanha = create<EstadoCampanha & CampanhaActions>()(
         // ====== MATA-MATA (oitavas, quartas, semi, final) ======
         const fasesOrdem: FaseTorneio[] = ["oitavas", "quartas", "semi", "final"];
         if (fasesOrdem.includes(s.fase) && s.proximoConfronto) {
-          const casaTime = s.proximoConfronto.casa!;
-          const foraTime = s.proximoConfronto.fora!;
+          // CRÍTICO: garante que MEU TIME é SEMPRE "casa" na simulação,
+          // independentemente de como o confronto foi montado na chave.
+          // Isso evita o bug de placar invertido (live screen mostra `meu`
+          // como casa, mas o simulador estava computando golsCasa pro CPU).
+          let casaTime = s.proximoConfronto.casa!;
+          let foraTime = s.proximoConfronto.fora!;
+          if (casaTime.isCPU && !foraTime.isCPU) {
+            const tmp = casaTime; casaTime = foraTime; foraTime = tmp;
+          }
+          const confrontoNormalizado = { ...s.proximoConfronto, casa: casaTime, fora: foraTime };
           const res = simularPartida(casaTime, foraTime);
           let textoPlacar = `${casaTime.nome} ${res.golsCasa} x ${res.golsFora} ${foraTime.nome}`;
           let vitoriaCasa: boolean;
@@ -470,7 +541,9 @@ export const useCampanha = create<EstadoCampanha & CampanhaActions>()(
             penaltis: pens,
           }];
 
-          // Atualiza a chave com o resultado e vencedor deste confronto
+          // Atualiza a chave APENAS com vencedor/resultado/pênaltis — NÃO sobrescreve
+          // casa/fora originais, pois isso fazia o chaveamento visual (final, etc.) embaralhar
+          // a ordem que vinha das fases anteriores.
           const chaveAtual = s.chave;
           const fasesArr = chaveAtual[s.fase as "oitavas" | "quartas" | "semi" | "final"];
           const novaFaseArr = fasesArr.map(c =>
@@ -483,12 +556,13 @@ export const useCampanha = create<EstadoCampanha & CampanhaActions>()(
               fase: "eliminado",
               historicoJogos: novoHist,
               chave: novaChave,
-              proximoConfronto: { ...s.proximoConfronto, resultado: res, penaltis: pens, vencedor },
+              proximoConfronto: { ...confrontoNormalizado, resultado: res, penaltis: pens, vencedor },
+              jaFoiSalvo: false,
             });
             return res;
           }
           if (s.fase === "final") {
-            set({ fase: "campeao", historicoJogos: novoHist, chave: novaChave });
+            set({ fase: "campeao", historicoJogos: novoHist, chave: novaChave, jaFoiSalvo: false });
             return res;
           }
 
@@ -564,7 +638,7 @@ export const useCampanha = create<EstadoCampanha & CampanhaActions>()(
     }),
     {
       name: "campanha-world-cup-draft",
-      storage: createJSONStorage(() => (typeof window !== "undefined" ? sessionStorage : ({} as any))),
+      storage: createJSONStorage(() => (typeof window !== "undefined" ? localStorage : ({} as any))),
     }
   )
 );

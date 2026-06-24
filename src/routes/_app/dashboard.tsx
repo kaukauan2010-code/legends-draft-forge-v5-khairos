@@ -32,6 +32,8 @@ function Dashboard() {
   const { data: campanhas } = useQuery({
     queryKey: ["campanhas-dashboard", user?.id],
     enabled: !!user,
+    staleTime: 0,
+    gcTime: 0,
     queryFn: async () => {
       const { data } = await supabase
         .from("partidas")
@@ -42,11 +44,42 @@ function Dashboard() {
     },
   });
 
-  const todas = campanhas ?? [];
-  const vitoriosas = todas.filter(p => p.fase_alcancada !== "grupos" && p.fase_alcancada !== "eliminado");
-  const campeas = todas.filter(p => p.campeao);
+  // Estatísticas agregadas (atualizadas após cada partida) — usadas para os HUDs
+  const { data: stats_db } = useQuery({
+    queryKey: ["stats-jogador", user?.id],
+    enabled: !!user,
+    staleTime: 0,
+    gcTime: 0,
+    queryFn: async () => {
+      const { data } = await supabase.from("stats_jogador").select("*").eq("user_id", user!.id).maybeSingle();
+      return data;
+    },
+  });
 
-  const stats = { total: todas.length, vitorias: vitoriosas.length, titulos: campeas.length };
+  // Busca direta do total de conquistas desbloqueadas (não depende do hook de estado local)
+  const { data: conquistas_db } = useQuery({
+    queryKey: ["conquistas-count", user?.id],
+    enabled: !!user,
+    staleTime: 0,
+    gcTime: 0,
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("conquistas_desbloqueadas")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user!.id);
+      return count ?? 0;
+    },
+  });
+
+  const todas = campanhas ?? [];
+  const campeas = todas.filter(p => p.campeao);
+  const vitoriosas = todas.filter(p => p.fase_alcancada !== "grupos" && p.fase_alcancada !== "eliminado");
+
+  const stats = {
+    total: stats_db?.partidas_jogadas ?? 0,
+    vitorias: stats_db?.vitorias ?? 0,
+    titulos: stats_db?.titulos ?? campeas.length,
+  };
 
   const listaDoPainel =
     painelAberto === "partidas" ? todas :
@@ -93,7 +126,7 @@ function Dashboard() {
         <HudStatCard icon={Flame} label="Vitórias" value={stats.vitorias} accent="purple" onClick={() => setPainelAberto("vitorias")} />
         <HudStatCard icon={Trophy} label="Mundiais" value={stats.titulos} accent="cyan" onClick={() => setPainelAberto("titulos")} />
         <Link to="/conquistas" className="block">
-          <HudStatCard icon={Medal} label="Conquistas" value={`${totalDesbloqueadas}`} suffix={`/${CONQUISTAS.length}`} accent="purple" progress={totalDesbloqueadas / CONQUISTAS.length} />
+          <HudStatCard icon={Medal} label="Conquistas" value={`${conquistas_db ?? totalDesbloqueadas}`} suffix={`/${CONQUISTAS.length}`} accent="purple" progress={(conquistas_db ?? totalDesbloqueadas) / CONQUISTAS.length} />
         </Link>
       </section>
 
