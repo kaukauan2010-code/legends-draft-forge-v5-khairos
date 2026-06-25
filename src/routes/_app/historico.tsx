@@ -4,6 +4,7 @@ import { LogIn } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { PartidaHistoricoCard, partidasDeCampanhas } from "@/components/CampanhaCard";
+import { lerCampanhasLocais, mesclarCampanhas } from "@/lib/historicoLocal";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/_app/historico")({
@@ -35,7 +36,8 @@ function Historico() {
     );
   }
 
-  const ultimasPartidas = partidasDeCampanhas(partidas ?? [], 21);
+  const campanhas = mesclarCampanhas(partidas ?? [], lerCampanhasLocais(user?.id));
+  const ultimasPartidas = partidasDeCampanhas(campanhas, 21);
 
   return (
     <div className="mx-auto max-w-md px-4 py-6 space-y-4">
