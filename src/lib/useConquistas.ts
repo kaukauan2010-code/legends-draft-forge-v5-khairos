@@ -138,7 +138,10 @@ export function useConquistas() {
     }
     let cancelado = false;
     const cacheInicial = lerCacheConquistas(user.id);
+    statsRef.current = STATS_VAZIAS;
     desbloqueadasRef.current = cacheInicial;
+    carregouRef.current = false;
+    setStats(STATS_VAZIAS);
     setDesbloqueadasIds(cacheInicial);
     (async () => {
       setCarregando(true);
