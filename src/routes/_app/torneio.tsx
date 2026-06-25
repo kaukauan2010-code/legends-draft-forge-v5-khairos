@@ -1179,18 +1179,18 @@ function TimePenaltisLista({ nome, bandeira, todas, feitas, alinhamento }: {
   nome: string; bandeira: string; todas: CobrancaPenalti[]; feitas: CobrancaPenalti[]; alinhamento: "esquerda" | "direita";
 }) {
   return (
-    <div className={cn("bg-white/5 rounded p-2 border border-white/10", alinhamento === "direita" && "text-right")}>
+    <div className={cn("bg-white/5 rounded p-1.5 sm:p-2 border border-white/10", alinhamento === "direita" && "text-right")}>
       <div className={cn("flex items-center gap-1.5 mb-1.5", alinhamento === "direita" && "flex-row-reverse")}>
         <FlagEmoji emoji={bandeira} size={14} />
-        <span className="text-[10px] font-bold uppercase tracking-widest truncate">{nome}</span>
+        <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest truncate">{nome}</span>
       </div>
       <ul className="space-y-0.5">
         {todas.map((c, i) => {
           const concluida = feitas.includes(c);
           return (
-            <li key={i} className={cn("flex items-center gap-1.5 text-[10px]", alinhamento === "direita" && "flex-row-reverse")}>
+            <li key={i} className={cn("flex items-center gap-1 text-[9px] sm:text-[10px]", alinhamento === "direita" && "flex-row-reverse")}>
               <span className={cn(
-                "size-2 rounded-sm shrink-0",
+                "size-1.5 sm:size-2 rounded-sm shrink-0",
                 !concluida ? "bg-white/10" : c.acertou ? "bg-pen-goal" : "bg-pen-miss",
               )} />
               <span className={cn("flex-1 truncate", !concluida && "text-foreground/40")}>{c.rodada}º · {c.jogador}</span>
