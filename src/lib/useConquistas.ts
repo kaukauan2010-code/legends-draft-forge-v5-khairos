@@ -24,6 +24,26 @@ export interface ResumoPartidaParaStats {
   rerollsUsadosNestaCompanha?: number;
 }
 
+function chaveCacheConquistas(userId: string) {
+  return `wcd-conquistas-desbloqueadas-${userId}`;
+}
+
+function lerCacheConquistas(userId: string): Set<string> {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const raw = localStorage.getItem(chaveCacheConquistas(userId));
+    const ids = raw ? JSON.parse(raw) : [];
+    return new Set(Array.isArray(ids) ? ids.filter(Boolean) : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function salvarCacheConquistas(userId: string, ids: Set<string>) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(chaveCacheConquistas(userId), JSON.stringify([...ids]));
+}
+
 function mesclarStats(atual: StatsJogador, ev: ResumoPartidaParaStats): StatsJogador {
   const novo: StatsJogador = { ...atual };
   novo.partidas_jogadas += 1;
@@ -88,8 +108,18 @@ export function useConquistas() {
   const desbloqueadasRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
-    if (!user) { setCarregando(false); return; }
+    if (!user) {
+      statsRef.current = STATS_VAZIAS;
+      desbloqueadasRef.current = new Set();
+      setStats(STATS_VAZIAS);
+      setDesbloqueadasIds(new Set());
+      setCarregando(false);
+      return;
+    }
     let cancelado = false;
+    const cacheInicial = lerCacheConquistas(user.id);
+    desbloqueadasRef.current = cacheInicial;
+    setDesbloqueadasIds(cacheInicial);
     (async () => {
       setCarregando(true);
       const [statsRes, conquistasRes] = await Promise.all([
@@ -119,10 +149,12 @@ export function useConquistas() {
         statsRef.current = novo;
         setStats(novo);
       }
-      if (conquistasRes.data) {
-        const ids = new Set(conquistasRes.data.map(c => c.conquista_id));
+      {
+        const idsBanco = new Set((conquistasRes.data ?? []).map(c => c.conquista_id));
+        const ids = new Set([...cacheInicial, ...idsBanco]);
         desbloqueadasRef.current = ids;
         setDesbloqueadasIds(ids);
+        salvarCacheConquistas(user.id, ids);
         // Reconcilia conquistas antigas: se as estatísticas já atingiram a meta,
         // a conquista deve contar no dashboard mesmo que a linha não tenha sido
         // gravada antes por algum bug de persistência.
@@ -132,6 +164,7 @@ export function useConquistas() {
           faltantes.forEach(c => novoSet.add(c.id));
           desbloqueadasRef.current = novoSet;
           setDesbloqueadasIds(novoSet);
+          salvarCacheConquistas(user.id, novoSet);
           await supabase.from("conquistas_desbloqueadas").upsert(
             faltantes.map(c => ({ user_id: user.id, conquista_id: c.id })),
             { onConflict: "user_id,conquista_id", ignoreDuplicates: true },
@@ -154,13 +187,17 @@ export function useConquistas() {
     if (error) return [];
 
     // Usa o set MAIS atual (ref) — não o snapshot do render.
-    const idsAtuais = desbloqueadasRef.current;
+    // Junta o estado em memória com o cache local. Mesmo se o banco falhar ou
+    // demorar para carregar, uma conquista já notificada não volta a subir.
+    const idsAtuais = new Set([...desbloqueadasRef.current, ...lerCacheConquistas(user.id)]);
+    desbloqueadasRef.current = idsAtuais;
     const novas = novasConquistas(statsDepois, idsAtuais);
     if (novas.length) {
       const novoSet = new Set(idsAtuais);
       novas.forEach(c => novoSet.add(c.id));
       desbloqueadasRef.current = novoSet;
       setDesbloqueadasIds(novoSet);
+      salvarCacheConquistas(user.id, novoSet);
       // upsert com onConflict ignora duplicatas se duas chamadas concorrerem.
       await supabase.from("conquistas_desbloqueadas").upsert(
         novas.map(c => ({ user_id: user.id, conquista_id: c.id })),
