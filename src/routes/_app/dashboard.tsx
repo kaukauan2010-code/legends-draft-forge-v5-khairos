@@ -63,11 +63,13 @@ function Dashboard() {
     staleTime: 0,
     gcTime: 0,
     queryFn: async () => {
-      const { count } = await supabase
+      const { data } = await supabase
         .from("conquistas_desbloqueadas")
-        .select("*", { count: "exact", head: true })
+        .select("conquista_id")
         .eq("user_id", user!.id);
-      return count ?? 0;
+      // Conta IDs únicos para evitar duplicatas no banco afetando o número
+      const unicos = new Set((data ?? []).map(c => c.conquista_id));
+      return unicos.size;
     },
   });
 
@@ -126,7 +128,7 @@ function Dashboard() {
         <HudStatCard icon={Flame} label="Vitórias" value={stats.vitorias} accent="purple" onClick={() => setPainelAberto("vitorias")} />
         <HudStatCard icon={Trophy} label="Mundiais" value={stats.titulos} accent="cyan" onClick={() => setPainelAberto("titulos")} />
         <Link to="/conquistas" className="block">
-          <HudStatCard icon={Medal} label="Conquistas" value={`${conquistas_db ?? totalDesbloqueadas}`} suffix={`/${CONQUISTAS.length}`} accent="purple" progress={(conquistas_db ?? totalDesbloqueadas) / CONQUISTAS.length} />
+          <HudStatCard icon={Medal} label="Conquistas" value={`${conquistas_db !== undefined ? conquistas_db : totalDesbloqueadas}`} suffix={`/${CONQUISTAS.length}`} accent="purple" progress={(conquistas_db !== undefined ? conquistas_db : totalDesbloqueadas) / CONQUISTAS.length} />
         </Link>
       </section>
 

@@ -135,7 +135,6 @@ function DraftOnline() {
 
   useEffect(() => {
     if (!sala || !meuDraft || meuDraft.terminou || enviando) return;
-    if (!meuDraft.jogadores_oferecidos && !pendente) return;
     if (tempo <= 0) {
       setPendente(null);
       forcarFimDraftOnline({ data: { salaId: sala.id } })
@@ -157,8 +156,6 @@ function DraftOnline() {
     return <div className="grid min-h-[60vh] place-items-center text-muted-foreground text-sm">Carregando draft...</div>;
   }
 
-  const esconderForca = sala.modo === "almanaque";
-  const esconderRaridade = sala.modo === "almanaque";
   const limite = sala.modo === "almanaque" ? 1 : 3;
 
   // ====== ETAPA 0: ainda não escolheu formação/estratégia ======
@@ -317,16 +314,16 @@ function DraftOnline() {
         </header>
 
         <ProgressoJogadores humanos={humanos} draftDe={draftDe} meuId={user?.id ?? null}
-          esconderStats={esconderForca} onClickJogador={setVerPicksDe} verPicksDe={verPicksDe} />
+          esconderStats={false} onClickJogador={setVerPicksDe} verPicksDe={verPicksDe} />
 
         {verPicksDe && (
           <PainelPicks userId={verPicksDe} humanos={humanos} draftDe={draftDe}
-            esconderStats={esconderForca} onClose={() => setVerPicksDe(null)} />
+            esconderStats={false} onClose={() => setVerPicksDe(null)} />
         )}
 
         <section className="rounded-2xl border border-border bg-card p-3">
           <h2 className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Seu time — {meuDraft.nome_time}</h2>
-          <MiniCampo formacao={formacao} escalacao={escalacao} esconderRaridade={esconderRaridade} />
+          <MiniCampo formacao={formacao} escalacao={escalacao} esconderRaridade={false} />
         </section>
 
         {todosTerminaram && ehMestre && (
@@ -370,7 +367,7 @@ function DraftOnline() {
             </div>
             <div className="font-display text-lg font-black leading-none">{meuDraft.trocas_restantes}/{limite}</div>
           </div>
-          {(selecaoAtual || pendente) && (
+          {!meuDraft.terminou && (
             <div className={cn("font-display text-3xl font-black tabular-nums",
               tempo <= 10 ? "text-destructive animate-pulse" : "text-foreground")}>
               00:{tempo.toString().padStart(2, "0")}
@@ -382,11 +379,11 @@ function DraftOnline() {
       {/* outros jogadores da sala */}
       {outrosHumanos.length > 0 && (
         <ProgressoJogadores humanos={humanos} draftDe={draftDe} meuId={user?.id ?? null}
-          esconderStats={esconderForca} onClickJogador={setVerPicksDe} verPicksDe={verPicksDe} compacto />
+          esconderStats={false} onClickJogador={setVerPicksDe} verPicksDe={verPicksDe} compacto />
       )}
       {verPicksDe && (
         <PainelPicks userId={verPicksDe} humanos={humanos} draftDe={draftDe}
-          esconderStats={esconderForca} onClose={() => setVerPicksDe(null)} />
+          esconderStats={false} onClose={() => setVerPicksDe(null)} />
       )}
 
       <div className="grid gap-4 md:grid-cols-[300px_minmax(0,1fr)]">
@@ -429,7 +426,7 @@ function DraftOnline() {
                   return (
                     <li key={j.numero + j.nome} className="relative">
                       <PlayerCard
-                        jogador={j} esconderForca={esconderForca} esconderRaridade={esconderRaridade}
+                        jogador={j} esconderRaridade={false}
                         disabled={!compativel || enviando} selecionado={ehPendente} variant="list"
                         onClick={() => {
                           if (jaEscalado) { toast.error(`${j.nome} já foi escalado nesta sala.`); return; }
@@ -470,7 +467,7 @@ function DraftOnline() {
             <span className="text-[10px] uppercase tracking-widest text-primary">{formacao.nome}</span>
           </div>
           <MiniCampo
-            formacao={formacao} escalacao={escalacao} posicaoAlvo={pendente?.posicao} esconderRaridade={esconderRaridade}
+            formacao={formacao} escalacao={escalacao} posicaoAlvo={pendente?.posicao} esconderRaridade={false}
             onSlotClick={pendente && !enviando ? (slotId) => escolher(slotId) : undefined}
             onJogadorClick={!pendente ? (slotId) => setSlotParaExcluir(slotId) : undefined}
           />
@@ -488,16 +485,16 @@ function DraftOnline() {
             return (
               <li key={slot.id} onClick={j ? () => setSlotParaExcluir(slot.id) : undefined}
                 className={cn("flex items-center gap-2 rounded-md border px-2 py-1.5 text-xs",
-                  j ? (esconderRaridade ? "border-muted-foreground/40" : `border-rarity-${RARIDADE_CSS[j.raridade]}`) + " bg-secondary cursor-pointer hover:opacity-80"
+                  j ? (false ? "border-muted-foreground/40" : `border-rarity-${RARIDADE_CSS[j.raridade]}`) + " bg-secondary cursor-pointer hover:opacity-80"
                     : "border-dashed border-border/50 text-muted-foreground")}>
                 <span className="w-10 shrink-0 text-[10px] font-bold uppercase tracking-widest text-primary">{slot.label}</span>
                 {j ? (
                   <>
                     <span className="flex-1 truncate font-bold">{j.nome}</span>
-                    {!esconderRaridade && (
+                    {!false && (
                       <span className={cn("text-[8px] font-bold uppercase tracking-widest", `rarity-${RARIDADE_CSS[j.raridade]}`)}>{j.raridade}</span>
                     )}
-                    {!esconderForca && <span className="font-display text-sm font-black">{j.forca}</span>}
+                    {!false && <span className="font-display text-sm font-black">{j.forca}</span>}
                     <Trash2 className="size-3.5 text-muted-foreground shrink-0" />
                   </>
                 ) : <span className="flex-1 italic">vazio</span>}
