@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app/online")({
   head: () => ({ meta: [{ title: "Online — World Cup Draft" }] }),
-  component: Online,
+  component: OnlineRoute,
 });
 
 type Competicao = "oitavas" | "final" | "copa";
@@ -27,6 +27,14 @@ function gerarCodigo() {
   let s = "";
   for (let i = 0; i < 4; i++) s += chars[Math.floor(Math.random() * chars.length)];
   return s;
+}
+
+function OnlineRoute() {
+  const isBaseOnline = useRouterState({
+    select: (state) => state.location.pathname.replace(/\/$/, "") === "/online",
+  });
+
+  return isBaseOnline ? <Online /> : <Outlet />;
 }
 
 function Online() {

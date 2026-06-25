@@ -97,6 +97,7 @@ export function useConquistas() {
         supabase.from("conquistas_desbloqueadas").select("conquista_id").eq("user_id", user.id),
       ]);
       if (cancelado) return;
+      let statsCarregadas = STATS_VAZIAS;
       if (statsRes.data) {
         const d = statsRes.data;
         const novo: StatsJogador = {
@@ -114,6 +115,7 @@ export function useConquistas() {
           formacoes_distintas_usadas: d.formacoes_distintas_usadas ?? [],
           selecoes_distintas_usadas: d.selecoes_distintas_usadas ?? [],
         };
+        statsCarregadas = novo;
         statsRef.current = novo;
         setStats(novo);
       }
@@ -121,6 +123,20 @@ export function useConquistas() {
         const ids = new Set(conquistasRes.data.map(c => c.conquista_id));
         desbloqueadasRef.current = ids;
         setDesbloqueadasIds(ids);
+        // Reconcilia conquistas antigas: se as estatísticas já atingiram a meta,
+        // a conquista deve contar no dashboard mesmo que a linha não tenha sido
+        // gravada antes por algum bug de persistência.
+        const faltantes = novasConquistas(statsCarregadas, ids);
+        if (faltantes.length) {
+          const novoSet = new Set(ids);
+          faltantes.forEach(c => novoSet.add(c.id));
+          desbloqueadasRef.current = novoSet;
+          setDesbloqueadasIds(novoSet);
+          await supabase.from("conquistas_desbloqueadas").upsert(
+            faltantes.map(c => ({ user_id: user.id, conquista_id: c.id })),
+            { onConflict: "user_id,conquista_id", ignoreDuplicates: true },
+          );
+        }
       }
       setCarregando(false);
     })();
@@ -156,8 +172,9 @@ export function useConquistas() {
 
   const conquistasComProgresso: ConquistaComProgresso[] = calcularProgresso(stats, desbloqueadasIds);
 
-  // totalDesbloqueadas sempre conta apenas IDs únicos (Set garante unicidade)
-  const totalDesbloqueadas = desbloqueadasIds.size;
+  // Conta também conquistas que as estatísticas já comprovam como desbloqueadas.
+  // Assim dashboard/tela de conquistas não ficam 0/100 se o registro remoto falhar.
+  const totalDesbloqueadas = conquistasComProgresso.filter(c => c.desbloqueada).length;
 
   return {
     stats,

@@ -5,7 +5,7 @@ import { useCampanha } from "@/lib/campanha";
 import { FORMACOES } from "@/lib/formacoes";
 import { MiniCampo } from "@/components/MiniCampo";
 import { Button } from "@/components/ui/button";
-import { Dices, Shuffle, Shield, Sword, Star, Trash2, X, Lock, Zap } from "lucide-react";
+import { Dices, Shuffle, Shield, Sword, Star, Trash2, X, Lock, Zap, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { statsEscalacao } from "@/lib/simulador";
 import { RARIDADE_TEXT_CLASS, RARIDADE_BORDER_CLASS, RARIDADE_LABEL, posicoesCompativeis, SELECOES } from "@/lib/selecoes";
@@ -115,6 +115,13 @@ function Draft() {
   return (
     <div className="mx-auto max-w-5xl px-3 py-3 space-y-3">
       {/* HEADER compacto: stats + timer */}
+      <Button
+        variant="outline"
+        onClick={() => { s.resetar(); navigate({ to: "/dashboard" }); }}
+        className="w-full h-9 border-destructive/30 bg-destructive/10 text-destructive font-bold uppercase tracking-widest text-[10px]"
+      >
+        <RotateCcw className="size-3 mr-1.5" /> Voltar ao início
+      </Button>
       <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 space-y-1.5">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div className="min-w-0">
