@@ -627,7 +627,7 @@ function Torneio() {
       <div className="min-h-[100svh] bg-pen-dark text-foreground font-pen-mono flex flex-col -mx-4 -my-6 md:-mx-0">
         <BotaoVoltarInicio onClick={voltarAoInicio} compacto />
         {/* Top nav / fase */}
-        <nav className="px-4 py-2.5 flex justify-between items-center border-b border-white/10">
+        <nav className="px-3 py-2 flex justify-between items-center border-b border-white/10">
           <span className="text-[10px] tracking-[0.2em] uppercase text-foreground/40">
             {sufixoFase ? `${sufixoFase} — Pênaltis` : "Disputa de Pênaltis"}
           </span>
@@ -638,17 +638,17 @@ function Torneio() {
         </nav>
 
         {/* Scoreboard */}
-        <header className="p-4 space-y-3">
+        <header className="px-3 py-2 space-y-2">
           <div className="flex justify-between items-end gap-2">
             <div className="flex flex-col items-start gap-1 min-w-0">
-              <FlagEmoji emoji={flagCasa} size={30} />
-              <h2 className="font-pen-display text-lg tracking-wide truncate max-w-[9ch]">{nomeCasa}</h2>
+              <FlagEmoji emoji={flagCasa} size={24} />
+              <h2 className="font-pen-display text-sm sm:text-lg tracking-wide truncate max-w-[9ch]">{nomeCasa}</h2>
               <div className="flex gap-1">
                 {indCasa.map((st, i) => (
                   <div
                     key={i}
                     className={cn(
-                      "size-2.5 rounded-sm border",
+                       "size-2 rounded-sm border",
                       st === "gol" && "bg-pen-goal border-pen-goal",
                       st === "miss" && "bg-pen-miss border-pen-miss",
                       st === "pendente" && "bg-white/5 border-white/15",
@@ -659,21 +659,21 @@ function Torneio() {
             </div>
 
             <div className="flex flex-col items-center shrink-0">
-              <div className="text-4xl font-pen-display leading-none tracking-tighter tabular-nums">
+              <div className="text-3xl sm:text-4xl font-pen-display leading-none tracking-tighter tabular-nums">
                 {placarCasa} <span className="text-white/20">x</span> {placarFora}
               </div>
               <span className="text-[9px] uppercase text-foreground/40 mt-1">Placar Atual</span>
             </div>
 
             <div className="flex flex-col items-end gap-1 min-w-0">
-              <FlagEmoji emoji={flagFora} size={30} />
-              <h2 className="font-pen-display text-lg tracking-wide truncate max-w-[9ch]">{nomeFora}</h2>
+              <FlagEmoji emoji={flagFora} size={24} />
+              <h2 className="font-pen-display text-sm sm:text-lg tracking-wide truncate max-w-[9ch]">{nomeFora}</h2>
               <div className="flex gap-1">
                 {indFora.map((st, i) => (
                   <div
                     key={i}
                     className={cn(
-                      "size-2.5 rounded-sm border",
+                       "size-2 rounded-sm border",
                       st === "gol" && "bg-pen-goal border-pen-goal",
                       st === "miss" && "bg-pen-miss border-pen-miss",
                       st === "pendente" && "bg-white/5 border-white/15",
@@ -686,13 +686,13 @@ function Torneio() {
         </header>
 
         {/* Stadium view (gol + bola + luva do goleiro) */}
-        <main className="relative flex-1 flex flex-col justify-center items-center px-4 overflow-hidden">
+        <main className="relative flex-1 flex flex-col justify-center items-center px-3 overflow-hidden min-h-[300px]">
           <div className="absolute inset-0 pointer-events-none"
                style={{ background: "radial-gradient(ellipse at 50% 60%, var(--pen-light) 0%, transparent 60%)" }} />
 
-          <div className="relative w-full max-w-[300px] aspect-[4/5] flex flex-col">
+          <div className="relative w-full max-w-[250px] sm:max-w-[300px] aspect-[4/5] flex flex-col">
             {/* Trave + rede */}
-            <div className="relative w-full h-40 border-x-4 border-t-4 border-white/80 rounded-t-sm overflow-hidden shadow-[0_-20px_60px_-10px_rgba(255,255,255,0.1)]">
+            <div className="relative w-full h-32 sm:h-40 border-x-4 border-t-4 border-white/80 rounded-t-sm overflow-hidden shadow-[0_-20px_60px_-10px_rgba(255,255,255,0.1)]">
               {/* rede */}
               <div className="absolute inset-0 opacity-25" style={{
                 backgroundImage: "linear-gradient(to right, rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.5) 1px, transparent 1px)",
@@ -707,7 +707,7 @@ function Torneio() {
                     {/* luva do goleiro */}
                     <div
                       key={`luva-${cobrancasFeitas.length}`}
-                       className="absolute text-2xl transition-all duration-500 ease-out animate-pen-enter"
+                        className="absolute text-xl sm:text-2xl transition-all duration-500 ease-out animate-pen-enter"
                       style={{ left: `${pos.luva.x}%`, top: `${pos.luva.y}%`, transform: "translate(-50%, -50%)" }}
                     >
                       🧤
@@ -715,7 +715,7 @@ function Torneio() {
                     {/* bola */}
                     <div
                       key={`bola-${cobrancasFeitas.length}`}
-                       className="absolute text-xl transition-all duration-700 ease-out"
+                        className="absolute text-lg sm:text-xl transition-all duration-700 ease-out"
                       style={{ left: `${pos.bola.x}%`, top: `${pos.bola.y}%`, transform: "translate(-50%, -50%)", filter: ultima.acertou ? "drop-shadow(0 0 8px rgba(34,197,94,0.8))" : "drop-shadow(0 0 8px rgba(239,68,68,0.8))" }}
                     >
                       ⚽
@@ -724,7 +724,7 @@ function Torneio() {
                     <div
                       key={`label-${cobrancasFeitas.length}`}
                       className={cn(
-                         "absolute top-2 left-1/2 -translate-x-1/2 font-pen-display text-2xl uppercase tracking-widest animate-pen-enter",
+                          "absolute top-2 left-1/2 -translate-x-1/2 font-pen-display text-xl sm:text-2xl uppercase tracking-widest animate-pen-enter",
                         ultima.acertou ? "text-pen-goal" : "text-pen-miss",
                       )}
                     >
@@ -748,7 +748,7 @@ function Torneio() {
           {proximoBatedor && !acabou && (
             <div key={indiceAtual} className="absolute bottom-4 left-0 w-full px-8 text-center animate-pen-enter">
               <p className="text-[10px] uppercase tracking-[0.3em] text-foreground/50 mb-1">Cobrando agora</p>
-              <h3 className="font-pen-display text-2xl tracking-wider">{proximoBatedor.jogador}</h3>
+              <h3 className="font-pen-display text-xl sm:text-2xl tracking-wider">{proximoBatedor.jogador}</h3>
               <div className="mt-2 inline-flex items-center gap-2 px-3 py-1 bg-white/5 border border-white/10 rounded-full">
                 <FlagEmoji emoji={proximoBatedor.time === "casa" ? flagCasa : flagFora} size={12} />
                 <span className="text-[10px] font-bold text-pen-goal">
@@ -760,11 +760,11 @@ function Torneio() {
         </main>
 
         {/* Footer: histórico SEPARADO por time */}
-        <footer className="p-3 pt-1 space-y-2">
+        <footer className="p-2 pt-1 space-y-1.5">
           <div className="text-center text-[10px] uppercase tracking-[0.3em] text-foreground/40">
             {acabou ? "Disputa finalizada" : `Automático · ${velocidade}`}
           </div>
-          <div className="grid grid-cols-2 gap-3">
+           <div className="grid grid-cols-2 gap-2">
             <TimePenaltisLista nome={nomeCasa} bandeira={flagCasa} todas={cobrancas.filter(c => c.time === "casa")} feitas={cobrancasFeitas} alinhamento="esquerda" />
             <TimePenaltisLista nome={nomeFora} bandeira={flagFora} todas={cobrancas.filter(c => c.time === "fora")} feitas={cobrancasFeitas} alinhamento="direita" />
           </div>
