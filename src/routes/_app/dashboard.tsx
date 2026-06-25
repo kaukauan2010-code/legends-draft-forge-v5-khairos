@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useConquistas } from "@/lib/useConquistas";
 import { CONQUISTAS } from "@/lib/conquistas";
 import { PartidaHistoricoCard, partidasDeCampanhas } from "@/components/CampanhaCard";
+import { lerCampanhasLocais, mesclarCampanhas } from "@/lib/historicoLocal";
 import { Trophy, Swords, Flame, Medal, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -74,7 +75,8 @@ function Dashboard() {
     },
   });
 
-  const todas = campanhas ?? [];
+  const campanhasLocais = lerCampanhasLocais(user?.id);
+  const todas = mesclarCampanhas(campanhas ?? [], campanhasLocais);
   const campeas = todas.filter(p => p.campeao);
   const todasPartidas = partidasDeCampanhas(todas, 21);
   const vitoriosas = todasPartidas.filter(item => item.rodada.minhaVitoria && !item.rodada.empate);
