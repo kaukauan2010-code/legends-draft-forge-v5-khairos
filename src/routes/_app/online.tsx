@@ -132,7 +132,7 @@ function Online() {
     let proxSlot = 1;
     while (usados.has(proxSlot)) proxSlot++;
     const { error } = await supabase.from("sala_jogadores").insert({
-      sala_id: sala.id, user_id: user.id, nome: meuNome, slot: proxSlot,
+      sala_id: sala.id, user_id: user.id, nome: meuNome, slot: proxSlot, bandeira: bandeiraRand(),
     });
     setBusy(false);
     if (error) { toast.error(error.message); return; }
