@@ -84,7 +84,7 @@ function Online() {
         }).select("id, codigo").single();
         if (!error && data) {
           const { error: jErr } = await supabase.from("sala_jogadores").insert({
-            sala_id: data.id, user_id: user.id, nome: meuNome, slot: 1,
+            sala_id: data.id, user_id: user.id, nome: meuNome, slot: 1, bandeira: bandeiraRand(),
           });
           if (jErr) {
             console.error("[online] erro ao entrar como mestre", jErr);
