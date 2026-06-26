@@ -12,7 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { Trophy, Play, Crown, Bot, ChevronRight, Hourglass, Network, WifiOff, Skull } from "lucide-react";
+import { Trophy, Play, Crown, Bot, ChevronRight, Hourglass, Network, WifiOff, Skull, X } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 import { FORMACOES, type FormacaoId } from "@/lib/formacoes";
 import { RARIDADE_CSS } from "@/lib/selecoes";
