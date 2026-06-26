@@ -499,8 +499,19 @@ function TorneioOnline() {
   }
 
   // ---------- TELA PRINCIPAL ----------
+  const abandonar = async () => {
+    if (!sala || !user) return;
+    if (!confirm("Abandonar a sala? Você sairá do torneio.")) return;
+    await supabase.from("sala_jogadores").delete().eq("sala_id", sala.id).eq("user_id", user.id);
+    navigate({ to: "/online" });
+  };
+
   return (
-    <div className="mx-auto max-w-md px-4 py-6 space-y-5 pb-10 animate-enter">
+    <div className="mx-auto max-w-md px-4 py-6 space-y-5 pb-10 animate-enter relative">
+      <Button onClick={abandonar} variant="ghost" size="sm"
+        className="absolute right-3 top-3 text-destructive h-7 px-2 text-[10px] uppercase tracking-widest font-bold z-20">
+        <X className="size-3 mr-1" /> Sair
+      </Button>
       <header className="text-center space-y-1">
         <div className="flex items-center justify-center gap-1.5 text-[10px] uppercase tracking-widest text-muted-foreground">
           <Network className="size-3" /> Torneio online · {sala.codigo}
