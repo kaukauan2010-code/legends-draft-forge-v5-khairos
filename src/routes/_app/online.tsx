@@ -12,7 +12,17 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/_app/online")({
   head: () => ({ meta: [{ title: "Online — World Cup Draft" }] }),
   component: OnlineRoute,
+  validateSearch: (s: Record<string, unknown>) => ({ codigo: typeof s.codigo === "string" ? s.codigo : undefined }),
 });
+
+// Bandeiras aleatórias para humanos
+const FLAGS_LOBBY = [
+  "🇧🇷","🇦🇷","🇫🇷","🇩🇪","🇪🇸","🇵🇹","🇮🇹","🇳🇱","🇧🇪","🇭🇷",
+  "🇺🇾","🇨🇴","🇨🇱","🇲🇽","🇺🇸","🇨🇦","🇯🇵","🇰🇷","🇦🇺","🇲🇦",
+  "🇸🇳","🇨🇲","🇬🇭","🇳🇬","🇪🇬","🇸🇦","🇮🇷","🇶🇦","🇨🇭","🇩🇰",
+  "🇸🇪","🇳🇴","🇵🇱","🇷🇸","🇹🇷","🇬🇷",
+];
+const bandeiraRand = () => FLAGS_LOBBY[Math.floor(Math.random() * FLAGS_LOBBY.length)]!;
 
 type Competicao = "oitavas" | "final" | "copa";
 const COMPETICOES: { id: Competicao; label: string; vagas: number; icone: typeof Trophy; desc: string }[] = [
